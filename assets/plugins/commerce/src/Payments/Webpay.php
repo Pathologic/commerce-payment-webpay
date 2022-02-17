@@ -7,10 +7,12 @@ namespace Commerce\Payments;
 class Webpay extends Payment
 {
     protected $debug = false;
+	protected $test = false;
     public function __construct($modx, array $params = [])
     {
         parent::__construct($modx, $params);
         $this->debug = !empty($this->getSetting('debug'));
+		$this->test = !empty($this->getSetting('test'));
         $this->lang = $modx->commerce->getUserLanguage('webpay');
     }
 
@@ -55,7 +57,7 @@ class Webpay extends Payment
             '*scart'                => '',
             'wsb_version'           => '2',
             'wsb_seed'              => $seed,
-            'wsb_test'              => $this->debug ? 1 : 0,
+            'wsb_test'              => $this->test ? 1 : 0,
             'wsb_storeid'           => $this->getSetting('store_id'),
             'wsb_order_num'         => $order['id'],
             'wsb_currency_id'       => $currency['code'],
@@ -89,7 +91,7 @@ class Webpay extends Payment
             foreach ($subtotals as $id => $item) {
                 if ($item['title'] == $delivery) {
                     $data['wsb_shipping_name'] = $delivery;
-                    $data['wsb_shipping_price'] = $item['price'];
+                    $data['wsb_shipping_price'] = number_format($item['price'], 2, '.', '');
                     continue;
                 }
                 if ($item['price'] < 0) {
@@ -107,7 +109,7 @@ class Webpay extends Payment
                 }
             }
             $data['wsb_discount_name'] = $this->lang['webpay.discount'];
-            $data['wsb_discount_price'] = abs($discount);
+            $data['wsb_discount_price'] = abs(number_format($discount, 2, '.', ''));
             $data['wsb_total'] = number_format($order['amount'], 2, '.', '');
         }
 
@@ -149,13 +151,13 @@ class Webpay extends Payment
         ]);
 
         return $view->render('payment_form.tpl', [
-            'url'    => $this->debug ? 'https://securesandbox.webpay.by' : 'https://payment.webpay.by',
+            'url'    => $this->test ? 'https://securesandbox.webpay.by' : 'https://payment.webpay.by',
             'method' => 'post',
             'data'   => $data,
         ]);
     }
 
-    protected function prepareItems($cart)
+    protected function prepareItems($cart, $orderCurrency = NULL, $paymentCurrency = NULL)
     {
         $items = [];
 
